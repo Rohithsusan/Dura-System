@@ -147,6 +147,18 @@
 
   /* WORKFLOW */
   .workflow-layout{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:14px;min-height:100%;}
+  .wf-project-picker{display:flex;flex-direction:column;gap:12px;}
+  .wf-project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:14px;}
+  .wf-project-card{background:#fff;border:1px solid var(--gl);border-radius:12px;padding:16px;cursor:pointer;transition:box-shadow .2s,border-color .2s,transform .15s;text-align:left;font:inherit;color:inherit;width:100%;}
+  .wf-project-card:hover,.wf-project-card:focus-visible{box-shadow:0 8px 32px rgba(14,19,175,.12);border-color:rgba(58,27,219,.35);outline:none;}
+  .wf-project-card:active{transform:scale(.995);}
+  .wf-project-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
+  .wf-project-strip{width:6px;min-height:48px;border-radius:4px;flex-shrink:0;}
+  .wf-project-name{font-size:14px;font-weight:700;line-height:1.35;}
+  .wf-project-client{font-size:12px;color:var(--gm);margin-top:4px;}
+  .wf-project-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;}
+  .wf-back-btn{border:1px solid var(--gl);border-radius:8px;padding:7px 11px;background:#fff;font-family:'Inter',sans-serif;font-size:11px;cursor:pointer;}
+  .wf-back-btn:hover{border-color:var(--blue);color:var(--blue);}
   .wf-left,.wf-right{background:#fff;border:1px solid var(--gl);border-radius:14px;padding:14px;}
   .wf-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
   .wf-title{font-size:14px;font-weight:700;}
@@ -366,14 +378,24 @@
   </div>
 
   <div class="panel" id="panel-workflow">
-    <div class="workflow-layout">
+    <div class="wf-project-picker" id="workflowProjectPicker">
+      <div>
+        <div class="wf-title">Choose Project</div>
+        <div class="wf-sub">Open a project to view its full workflow stages.</div>
+      </div>
+      <div class="wf-project-grid" id="workflowProjectGrid"></div>
+    </div>
+    <div class="workflow-layout" id="workflowWorkspace" style="display:none">
       <div class="wf-left">
         <div class="wf-head">
           <div>
             <div class="wf-title">Dura Workflow</div>
             <div class="wf-sub">Follow one fixed process for every branding project.</div>
           </div>
-          <select class="wf-project-select" id="workflowProjectSelect"></select>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button type="button" class="wf-back-btn" onclick="showWorkflowProjectCards()">← Projects</button>
+            <select class="wf-project-select" id="workflowProjectSelect"></select>
+          </div>
         </div>
         <div class="wf-progress-track"><div class="wf-progress-fill" id="wfProgressFill" style="width:0%"></div></div>
         <div class="wf-progress-text" id="wfProgressText">0 of 6 steps completed</div>
@@ -711,6 +733,7 @@ let workflowState={};
 let workflowCurrentProjectId=null;
 let workflowCurrentStep='Discovery';
 let activeWorkflowDoc=null;
+let workflowView='cards';
 
 function fmt(n){return n?'₹'+Number(n).toLocaleString('en-IN'):'—';}
 function escapeHtml(s){
@@ -988,6 +1011,40 @@ function getWorkflowStepState(pid,stepId){
   ensureWorkflowProjectState(pid);
   return workflowState[pid][stepId];
 }
+function openWorkflowProject(pid){
+  if(!projects.find(p=>p.id===pid))return;
+  workflowCurrentProjectId=pid;
+  workflowView='detail';
+  renderWorkflow();
+}
+function showWorkflowProjectCards(){
+  workflowView='cards';
+  renderWorkflow();
+}
+function renderWorkflowProjectCards(){
+  const grid=document.getElementById('workflowProjectGrid');
+  if(!grid)return;
+  if(!projects.length){
+    grid.innerHTML='<p style="font-size:13px;color:var(--gm)">No projects available. Create a project first.</p>';
+    return;
+  }
+  grid.innerHTML=projects.map(p=>{
+    const stepDone=workflowStages.filter(st=>getWorkflowStepState(p.id,st.id).status==='completed').length;
+    return `<button type="button" class="wf-project-card" onclick="openWorkflowProject(${p.id})" aria-label=${JSON.stringify('Open workflow for '+p.name)}>
+      <div class="wf-project-top">
+        <div class="wf-project-strip" style="background:${PC[p.phase]||'#6366f1'}"></div>
+        <div>
+          <div class="wf-project-name">${escapeHtml(p.name)}</div>
+          <div class="wf-project-client">${escapeHtml(p.client)}</div>
+        </div>
+      </div>
+      <div class="wf-project-meta">
+        <span class="badge ${p.status}">${{active:'Active',review:'In Review',done:'Completed',hold:'On Hold'}[p.status]}</span>
+        <span class="wf-sub">${stepDone}/${workflowStages.length} steps done</span>
+      </div>
+    </button>`;
+  }).join('');
+}
 function renderWorkflowProjectOptions(){
   const select=document.getElementById('workflowProjectSelect');
   if(!select)return;
@@ -1153,6 +1210,16 @@ function renderWorkflowDetails(){
   </div>`;
 }
 function renderWorkflow(){
+  const picker=document.getElementById('workflowProjectPicker');
+  const workspace=document.getElementById('workflowWorkspace');
+  if(workflowView==='cards'){
+    if(picker)picker.style.display='flex';
+    if(workspace)workspace.style.display='none';
+    renderWorkflowProjectCards();
+    return;
+  }
+  if(picker)picker.style.display='none';
+  if(workspace)workspace.style.display='grid';
   renderWorkflowProjectOptions();
   if(!workflowCurrentProjectId){document.getElementById('workflowDetails').innerHTML='<p class="wf-sub">Create a project to start workflow.</p>';return;}
   ensureWorkflowProjectState(workflowCurrentProjectId);
@@ -1188,7 +1255,7 @@ function switchTab(name,el){
   el.classList.add('active');
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='tasks')renderTaskBoard();
-  if(name==='workflow')renderWorkflow();
+  if(name==='workflow'){workflowView='cards';renderWorkflow();}
 }
 
 function openModal(){editId=null;clearModal();document.getElementById('modalTitle').innerText='New Project';document.getElementById('modalOverlay').classList.add('open');}
