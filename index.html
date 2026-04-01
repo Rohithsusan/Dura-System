@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Dura Project Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  :root{--gradient:linear-gradient(135deg,#0E13AF,#3A1BDB);--bg:#F8FEFA;--text:#191C20;--gl:#EDEFF2;--gm:#6B7280;--dark:#0B0D17;--blue:#3A1BDB;--dash-pad:clamp(12px,2.5vw,28px);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{height:100%;-webkit-text-size-adjust:100%;}
+  body{font-family:'Inter',sans-serif;background:#e4e8f0;color:var(--text);min-height:100%;min-height:100dvh;padding:var(--dash-pad);padding-bottom:max(var(--dash-pad),env(safe-area-inset-bottom));}
+  .tracker{width:100%;max-width:min(1600px,100%);margin:0 auto;background:var(--bg);border-radius:clamp(0px,2vw,16px);overflow:hidden;box-shadow:0 8px 48px rgba(14,19,175,.10);min-height:calc(100vh - 2 * var(--dash-pad));min-height:calc(100dvh - 2 * var(--dash-pad));display:flex;flex-direction:column;}
+
+  .header{background:var(--dark);padding:clamp(16px,3vw,28px) clamp(16px,3.5vw,36px);display:flex;justify-content:space-between;align-items:center;position:relative;overflow:hidden;flex-wrap:wrap;gap:14px;flex-shrink:0;}
+  .header::before{content:'';position:absolute;top:-60px;right:-40px;width:220px;height:220px;background:var(--gradient);border-radius:50%;opacity:.15;}
+  .brand{font-size:26px;font-weight:800;letter-spacing:4px;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .header-sub{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gm);margin-top:3px;}
+  .header-right{display:flex;gap:8px;flex-wrap:wrap;position:relative;}
+  .hbtn{border:none;border-radius:8px;padding:9px 16px;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:filter .2s;}
+  .hbtn.primary{background:var(--gradient);color:#fff;}
+  .hbtn.primary:hover{filter:brightness(1.15);}
+  .hbtn.sec{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);}
+  .hbtn.sec:hover{background:rgba(255,255,255,.15);}
+  .accent-bar{height:4px;background:var(--gradient);flex-shrink:0;}
+
+  .tracker-main{flex:1;display:flex;flex-direction:column;min-height:0;}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));border-bottom:1px solid var(--gl);flex-shrink:0;}
+  .stat{padding:clamp(14px,2vw,18px) clamp(14px,2vw,20px);border-right:1px solid var(--gl);border-bottom:none;}
+  .stat:last-child{border-right:none;}
+  .stat-val{font-size:22px;font-weight:800;}
+  .stat-val.grad{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .stat-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gm);margin-top:3px;font-weight:500;}
+
+  .tabs{display:flex;border-bottom:1px solid var(--gl);background:#fff;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;}
+  .tab{padding:13px 20px;font-size:12px;font-weight:600;letter-spacing:.5px;cursor:pointer;color:var(--gm);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+  .tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+  .tab:hover:not(.active){color:var(--text);}
+
+  .panel{display:none;padding:clamp(14px,2.5vw,22px) clamp(16px,3.5vw,28px);flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .panel.active{display:block;}
+
+  .task-board-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:clamp(12px,2vw,18px);}
+  .tb-card{background:#fff;border:1px solid var(--gl);border-radius:14px;padding:18px 20px;cursor:pointer;transition:box-shadow .2s,border-color .2s,transform .15s;text-align:left;font:inherit;color:inherit;width:100%;}
+  .tb-card:hover,.tb-card:focus-visible{box-shadow:0 8px 32px rgba(14,19,175,.12);border-color:rgba(58,27,219,.35);outline:none;}
+  .tb-card:active{transform:scale(.995);}
+  .tb-card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;}
+  .tb-card-strip{width:6px;min-height:52px;border-radius:4px;flex-shrink:0;}
+  .tb-card-title{font-size:14px;font-weight:700;line-height:1.3;}
+  .tb-card-client{font-size:12px;color:var(--gm);margin-top:4px;}
+  .tb-card-meta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:12px;font-size:11px;color:var(--gm);}
+  .tb-chip{font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:4px 10px;border-radius:20px;}
+  .tb-chip.done{background:rgba(22,163,74,.12);color:#15803d;}
+  .tb-chip.pend{background:rgba(245,158,11,.12);color:#854d0e;}
+  .tb-open-hint{font-size:11px;font-weight:600;color:var(--blue);margin-top:10px;}
+  .tasks-sub{font-size:12px;color:var(--gm);margin-top:4px;font-weight:500;}
+
+  .projects-grid{display:flex;flex-direction:column;gap:12px;}
+  .proj-card{background:#fff;border:1px solid var(--gl);border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;transition:box-shadow .2s;}
+  .proj-card:hover{box-shadow:0 4px 20px rgba(14,19,175,.08);}
+  .proj-color{width:8px;height:52px;border-radius:4px;flex-shrink:0;margin-top:2px;}
+  .proj-info{flex:1.2;min-width:140px;}
+  .proj-name{font-size:13px;font-weight:700;}
+  .proj-client{font-size:11px;color:var(--gm);margin-top:2px;}
+  .proj-phase{font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:5px;}
+  .proj-progress{flex:1;min-width:120px;}
+  .prog-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gm);margin-bottom:5px;font-weight:600;}
+  .prog-bar{height:5px;background:var(--gl);border-radius:4px;overflow:hidden;margin-bottom:4px;}
+  .prog-fill{height:100%;border-radius:4px;background:var(--gradient);}
+  .prog-pct{font-size:10px;color:var(--gm);}
+  .pay-mini{min-width:110px;flex:0.8;}
+  .pay-mini-title{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gm);font-weight:600;margin-bottom:6px;}
+  .pay-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .pay-lbl{font-size:10px;color:var(--gm);}
+  .pay-chip{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;}
+  .pay-chip.paid{background:rgba(22,163,74,.10);color:#15803d;}
+  .pay-chip.pending{background:rgba(234,179,8,.12);color:#854d0e;}
+  .pay-amt{font-size:11px;font-weight:600;}
+  .rev-mini{min-width:130px;flex:1;}
+  .rev-mini-title{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gm);font-weight:600;margin-bottom:6px;}
+  .rev-person{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .rev-pname{font-size:10px;font-weight:500;}
+  .rev-prole{font-size:9px;color:var(--gm);}
+  .rev-pamt{font-size:11px;font-weight:700;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .rev-div{height:1px;background:var(--gl);margin:3px 0;}
+  .proj-meta{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:80px;}
+  .badge{padding:3px 10px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:.5px;display:inline-block;}
+  .badge.active{background:rgba(14,19,175,.10);color:var(--blue);}
+  .badge.review{background:rgba(234,179,8,.12);color:#854d0e;}
+  .badge.done{background:rgba(22,163,74,.10);color:#15803d;}
+  .badge.hold{background:rgba(239,68,68,.10);color:#b91c1c;}
+  .proj-due{font-size:10px;color:var(--gm);}
+  .proj-actions{display:flex;gap:5px;align-items:center;}
+  .act-btn{background:none;border:1px solid var(--gl);border-radius:6px;padding:4px 9px;font-size:10px;cursor:pointer;color:var(--gm);font-family:'Inter',sans-serif;transition:all .2s;}
+  .act-btn:hover{border-color:var(--blue);color:var(--blue);}
+  .act-btn.danger:hover{border-color:#ef4444;color:#ef4444;}
+  .act-btn.report{background:rgba(14,19,175,.07);border-color:rgba(14,19,175,.2);color:var(--blue);}
+  .act-btn.report:hover{background:var(--gradient);color:#fff;border-color:transparent;}
+
+  .tasks-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .tasks-title{font-size:14px;font-weight:700;}
+  .phase-filter{display:flex;gap:6px;flex-wrap:wrap;}
+  .filter-btn{background:none;border:1px solid var(--gl);border-radius:20px;padding:5px 13px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;color:var(--gm);transition:all .2s;}
+  .filter-btn.active,.filter-btn:hover{background:var(--gradient);color:#fff;border-color:transparent;}
+  .task-list{display:flex;flex-direction:column;gap:8px;}
+  .task-item{background:#fff;border:1px solid var(--gl);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .task-check{width:17px;height:17px;border-radius:5px;border:2px solid var(--gl);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+  .task-check.checked{background:var(--gradient);border-color:transparent;}
+  .task-check.checked::after{content:'✓';color:#fff;font-size:10px;font-weight:700;}
+  .task-text{flex:1;font-size:13px;font-weight:500;min-width:120px;}
+  .task-text.done{text-decoration:line-through;color:var(--gm);}
+  .task-phase-tag{font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:20px;background:rgba(14,19,175,.08);color:var(--blue);}
+  .add-task-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .add-task-input{flex:1;border:1.5px solid var(--gl);border-radius:8px;padding:9px 13px;font-size:13px;font-family:'Inter',sans-serif;outline:none;min-width:140px;}
+  .add-task-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(58,27,219,.08);}
+  .add-task-btn{background:var(--gradient);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+
+  .checklist-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .cl-card{background:#fff;border:1px solid var(--gl);border-radius:12px;padding:18px;}
+  .cl-card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--blue);margin-bottom:12px;}
+  .cl-item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--gl);}
+  .cl-item:last-child{border-bottom:none;}
+  .cl-item input[type=checkbox]{accent-color:var(--blue);width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+  .cl-item label{font-size:12px;cursor:pointer;line-height:1.5;}
+
+  .pm-header{margin-bottom:18px;}
+  .pm-header h3{font-size:15px;font-weight:700;}
+  .pm-header p{font-size:12px;color:var(--gm);margin-top:3px;}
+  .pm-grid{display:flex;flex-direction:column;gap:10px;}
+  .pm-section{background:#fff;border:1px solid var(--gl);border-radius:12px;overflow:hidden;}
+  .pm-section-head{padding:13px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;}
+  .pm-section-head-left{display:flex;align-items:center;gap:10px;}
+  .pm-sec-icon{width:26px;height:26px;border-radius:7px;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;}
+  .pm-sec-title{font-size:13px;font-weight:700;}
+  .pm-sec-prog{font-size:10px;color:var(--gm);}
+  .pm-sec-arrow{font-size:11px;color:var(--gm);transition:transform .2s;}
+  .pm-section.open .pm-sec-arrow{transform:rotate(180deg);}
+  .pm-items{display:none;padding:0 16px 12px;border-top:1px solid var(--gl);}
+  .pm-section.open .pm-items{display:block;}
+  .pm-item{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--gl);}
+  .pm-item:last-child{border-bottom:none;}
+  .pm-item input[type=checkbox]{accent-color:var(--blue);width:14px;height:14px;cursor:pointer;flex-shrink:0;margin-top:2px;}
+  .pm-item-label{font-size:12px;font-weight:500;cursor:pointer;}
+  .pm-item-note{font-size:11px;color:var(--gm);margin-top:2px;}
+  .pm-prog-bar{height:3px;background:var(--gl);margin:0 16px 10px;border-radius:2px;overflow:hidden;}
+  .pm-prog-fill{height:100%;background:var(--gradient);border-radius:2px;transition:width .4s;}
+
+  /* WORKFLOW */
+  .workflow-layout{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:14px;min-height:100%;}
+  .wf-left,.wf-right{background:#fff;border:1px solid var(--gl);border-radius:14px;padding:14px;}
+  .wf-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .wf-title{font-size:14px;font-weight:700;}
+  .wf-sub{font-size:11px;color:var(--gm);}
+  .wf-project-select{border:1.5px solid var(--gl);border-radius:8px;padding:7px 10px;font-size:12px;font-family:'Inter',sans-serif;outline:none;min-width:180px;}
+  .wf-project-select:focus{border-color:var(--blue);}
+  .wf-progress-track{height:8px;background:var(--gl);border-radius:999px;overflow:hidden;margin-top:8px;}
+  .wf-progress-fill{height:100%;background:var(--gradient);}
+  .wf-progress-text{font-size:11px;color:var(--gm);margin-top:5px;}
+  .wf-steps{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+  .wf-step{border:1px solid var(--gl);border-radius:10px;padding:11px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;cursor:pointer;transition:all .2s;}
+  .wf-step:hover{border-color:rgba(58,27,219,.35);}
+  .wf-step.active{border-color:var(--blue);background:rgba(58,27,219,.05);}
+  .wf-step-left{display:flex;gap:10px;align-items:center;min-width:0;}
+  .wf-step-no{width:22px;height:22px;border-radius:6px;background:var(--gradient);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .wf-step-name{font-size:13px;font-weight:600;}
+  .wf-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
+  .wf-status.not_started{background:#eef2f7;color:#475569;}
+  .wf-status.in_progress{background:rgba(245,158,11,.14);color:#92400e;}
+  .wf-status.completed{background:rgba(22,163,74,.14);color:#166534;}
+  .wf-panel-title{font-size:15px;font-weight:700;}
+  .wf-panel-sub{font-size:12px;color:var(--gm);margin-top:3px;}
+  .wf-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;}
+  .wf-doc-btn{border:1px solid var(--gl);border-radius:8px;padding:8px 12px;background:#fff;font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;}
+  .wf-doc-btn:hover{border-color:var(--blue);color:var(--blue);}
+  .wf-section{margin-top:12px;}
+  .wf-section h4{font-size:11px;letter-spacing:1px;color:var(--blue);text-transform:uppercase;margin-bottom:8px;}
+  .wf-checklist{display:flex;flex-direction:column;gap:7px;}
+  .wf-cl-item{display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid var(--gl);padding-bottom:7px;}
+  .wf-cl-item:last-child{border-bottom:none;}
+  .wf-cl-item input{margin-top:2px;accent-color:var(--blue);}
+  .wf-cl-item label{font-size:12px;line-height:1.45;}
+  .wf-status-actions{display:flex;gap:7px;flex-wrap:wrap;}
+  .wf-st-btn{border:1px solid var(--gl);background:#fff;border-radius:20px;padding:6px 12px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .wf-st-btn.active{background:var(--gradient);color:#fff;border-color:transparent;}
+  .wf-note{width:100%;border:1.5px solid var(--gl);border-radius:10px;padding:10px 12px;font-size:12px;font-family:'Inter',sans-serif;line-height:1.55;min-height:90px;resize:vertical;outline:none;}
+  .wf-note:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(58,27,219,.08);}
+  .wf-tip-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;line-height:1.55;}
+  .wf-tip-card b{color:#0f172a;}
+
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--bg);border-radius:16px;width:100%;max-width:560px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2);margin:auto;}
+  .modal-header{background:var(--dark);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;}
+  .modal-header h3{font-size:13px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;}
+  .modal-close{background:none;border:none;color:var(--gm);font-size:20px;cursor:pointer;line-height:1;}
+  .modal-body{padding:20px 22px;display:flex;flex-direction:column;gap:12px;max-height:72vh;overflow-y:auto;}
+  .form-group{display:flex;flex-direction:column;gap:4px;}
+  .form-group label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--gm);}
+  .form-group input,.form-group select,.form-group textarea{border:1.5px solid var(--gl);border-radius:8px;padding:9px 11px;font-size:13px;font-family:'Inter',sans-serif;outline:none;color:var(--text);background:#fff;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(58,27,219,.08);}
+  .form-group textarea{resize:vertical;min-height:60px;line-height:1.5;}
+  .form-row{display:flex;gap:10px;}
+  .form-row .form-group{flex:1;}
+  .form-divider{height:1px;background:var(--gl);margin:4px 0;}
+  .form-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--blue);}
+  .pay-status-row{display:flex;gap:7px;}
+  .pay-status-opt{flex:1;}
+  .pay-status-opt input[type=radio]{display:none;}
+  .pay-status-opt label{display:block;text-align:center;padding:8px;border:1.5px solid var(--gl);border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--gm);}
+  .pay-status-opt input[type=radio]:checked+label{border-color:var(--blue);background:rgba(58,27,219,.07);color:var(--blue);}
+  .rev-grid{display:flex;flex-direction:column;gap:8px;}
+  .rev-person-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--gl);border-radius:8px;padding:10px 12px;}
+  .rev-avatar{width:28px;height:28px;border-radius:7px;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}
+  .rev-person-info{flex:1;}
+  .rev-person-name-f{font-size:12px;font-weight:600;}
+  .rev-person-role-f{font-size:10px;color:var(--gm);}
+  .rev-input{width:110px;border:1.5px solid var(--gl);border-radius:7px;padding:7px 10px;font-size:12px;font-family:'Inter',sans-serif;outline:none;color:var(--text);text-align:right;}
+  .rev-input:focus{border-color:var(--blue);}
+  .modal-footer{padding:0 22px 20px;display:flex;justify-content:flex-end;gap:10px;}
+  .modal-cancel{background:none;border:1.5px solid var(--gl);border-radius:8px;padding:9px 18px;font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;color:var(--gm);}
+  .modal-save{background:var(--gradient);color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;}
+  .modal-save.danger{background:#dc2626;}
+  .delete-help{font-size:12px;color:var(--gm);line-height:1.5;}
+  .delete-help b{color:#111827;}
+  .doc-title{font-size:12px;color:#475569;}
+  .doc-form{display:flex;flex-direction:column;gap:10px;}
+  .doc-form label{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--gm);text-transform:uppercase;}
+  .doc-form input,.doc-form textarea{border:1.5px solid var(--gl);border-radius:8px;padding:9px 11px;font-family:'Inter',sans-serif;font-size:13px;outline:none;}
+  .doc-form textarea{min-height:80px;resize:vertical;}
+  .doc-form input:focus,.doc-form textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(58,27,219,.08);}
+
+  /* REPORT PREVIEW */
+  .report-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+  .report-overlay.open{display:flex;}
+  .report-wrap{background:#fff;border-radius:16px;width:100%;max-width:700px;margin:auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .report-toolbar{background:var(--dark);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .report-toolbar span{font-size:12px;color:#fff;font-weight:600;letter-spacing:1px;}
+  .report-toolbar-btns{display:flex;gap:8px;}
+  .rtbtn{border:none;border-radius:7px;padding:8px 16px;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.5px;}
+  .rtbtn.dl{background:var(--gradient);color:#fff;}
+  .rtbtn.cl{background:rgba(255,255,255,.1);color:#fff;}
+
+  /* REPORT CONTENT */
+  #reportContent{padding:40px;background:#fff;}
+  .rc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #0E13AF;}
+  .rc-brand{font-size:28px;font-weight:800;letter-spacing:4px;background:linear-gradient(135deg,#0E13AF,#3A1BDB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .rc-brand-sub{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#6B7280;margin-top:3px;}
+  .rc-title-block{text-align:right;}
+  .rc-title{font-size:20px;font-weight:800;color:#191C20;}
+  .rc-date{font-size:11px;color:#6B7280;margin-top:4px;}
+
+  .rc-section{margin-bottom:28px;}
+  .rc-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#3A1BDB;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #EDEFF2;}
+
+  .rc-proj-block{background:#F8FEFA;border:1px solid #EDEFF2;border-radius:12px;padding:20px;margin-bottom:20px;break-inside:avoid;}
+  .rc-proj-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+  .rc-proj-name{font-size:16px;font-weight:800;color:#191C20;}
+  .rc-proj-client{font-size:12px;color:#6B7280;margin-top:2px;}
+  .rc-status-chip{padding:4px 12px;border-radius:20px;font-size:10px;font-weight:700;}
+  .rc-status-chip.active{background:rgba(14,19,175,.10);color:#3A1BDB;}
+  .rc-status-chip.review{background:rgba(234,179,8,.12);color:#854d0e;}
+  .rc-status-chip.done{background:rgba(22,163,74,.10);color:#15803d;}
+  .rc-status-chip.hold{background:rgba(239,68,68,.10);color:#b91c1c;}
+
+  .rc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .rc-box{background:#fff;border:1px solid #EDEFF2;border-radius:8px;padding:12px;}
+  .rc-box-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6B7280;margin-bottom:8px;}
+  .rc-prog-bar{height:8px;background:#EDEFF2;border-radius:4px;overflow:hidden;margin-bottom:5px;}
+  .rc-prog-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#0E13AF,#3A1BDB);}
+  .rc-prog-pct{font-size:13px;font-weight:700;color:#191C20;}
+  .rc-pay-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;}
+  .rc-pay-lbl{color:#6B7280;}
+  .rc-pay-val{font-weight:600;color:#191C20;}
+  .rc-pay-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;}
+  .rc-pay-status.paid{background:rgba(22,163,74,.10);color:#15803d;}
+  .rc-pay-status.pending{background:rgba(234,179,8,.12);color:#854d0e;}
+
+  .rc-rev-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #EDEFF2;font-size:12px;}
+  .rc-rev-row:last-child{border-bottom:none;}
+  .rc-rev-name{font-weight:600;color:#191C20;}
+  .rc-rev-role{font-size:10px;color:#6B7280;margin-top:1px;}
+  .rc-rev-amt{font-weight:700;color:#3A1BDB;}
+
+  .rc-tasks-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .rc-task-item{display:flex;align-items:center;gap:7px;font-size:11px;padding:5px 0;}
+  .rc-task-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .rc-task-dot.done{background:#22c55e;}
+  .rc-task-dot.pending{background:#f59e0b;}
+  .rc-task-txt{color:#374151;}
+  .rc-task-txt.done-txt{text-decoration:line-through;color:#9CA3AF;}
+
+  .rc-notes-box{background:#fff;border-left:3px solid #3A1BDB;padding:12px 14px;border-radius:0 8px 8px 0;font-size:12px;color:#374151;line-height:1.7;}
+  .rc-what-done{background:rgba(22,163,74,.06);border:1px solid rgba(22,163,74,.2);border-radius:8px;padding:12px;margin-bottom:8px;}
+  .rc-what-lag{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:12px;}
+  .rc-wl-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+  .rc-wl-title.green{color:#15803d;}
+  .rc-wl-title.red{color:#b91c1c;}
+  .rc-wl-text{font-size:12px;line-height:1.7;color:#374151;}
+
+  .rc-footer{margin-top:32px;padding-top:16px;border-top:1px solid #EDEFF2;display:flex;justify-content:space-between;align-items:center;}
+  .rc-footer-brand{font-size:14px;font-weight:800;letter-spacing:3px;background:linear-gradient(135deg,#0E13AF,#3A1BDB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .rc-footer-msg{font-size:10px;color:#9CA3AF;font-style:italic;}
+
+  @media(max-width:900px){
+    .header .brand{font-size:22px;}
+    .proj-card{flex-direction:column;align-items:stretch;}
+    .proj-meta{align-items:flex-start;}
+    .workflow-layout{grid-template-columns:1fr;}
+  }
+  @media(max-width:600px){
+    body{padding:10px;}
+    .stat{border-right:none;border-bottom:1px solid var(--gl);}
+    .stat:last-child{border-bottom:none;}
+    .panel{padding:14px;}
+    .checklist-grid,.rc-grid,.rc-tasks-grid{grid-template-columns:1fr;}
+    #reportContent{padding:20px;}
+    .report-toolbar{flex-wrap:wrap;}
+    .modal-body{max-height:65vh;}
+  }
+</style>
+</head>
+<body>
+<div class="tracker">
+  <div class="header">
+    <div>
+      <div class="brand">DURA</div>
+      <div class="header-sub">Project Tracker · Brand Building System</div>
+    </div>
+    <div class="header-right">
+      <button class="hbtn primary" onclick="openModal()">+ New Project</button>
+      <button class="hbtn sec" onclick="downloadAllReport()">⬇ Download Report</button>
+    </div>
+  </div>
+  <div class="accent-bar"></div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-val grad" id="statTotal">0</div><div class="stat-label">Total Projects</div></div>
+    <div class="stat"><div class="stat-val" id="statActive" style="color:#3A1BDB">0</div><div class="stat-label">Active</div></div>
+    <div class="stat"><div class="stat-val" id="statReview" style="color:#854d0e">0</div><div class="stat-label">In Review</div></div>
+    <div class="stat"><div class="stat-val" id="statDone" style="color:#15803d">0</div><div class="stat-label">Completed</div></div>
+    <div class="stat"><div class="stat-val grad" id="statRev">₹0</div><div class="stat-label">Total Revenue</div></div>
+  </div>
+
+  <div class="tracker-main">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('projects',this)">Projects</div>
+    <div class="tab" onclick="switchTab('tasks',this)">Tasks</div>
+    <div class="tab" onclick="switchTab('workflow',this)">Workflow</div>
+    <div class="tab" onclick="switchTab('checklist',this)">Client Checklist</div>
+    <div class="tab" onclick="switchTab('pm',this)">My PM Checklist</div>
+  </div>
+
+  <div class="panel active" id="panel-projects">
+    <div class="projects-grid" id="projectsList"></div>
+  </div>
+
+  <div class="panel" id="panel-tasks">
+    <div class="tasks-header">
+      <div>
+        <div class="tasks-title">Task Board</div>
+        <div class="tasks-sub">Open a project to create and manage its tasks.</div>
+      </div>
+    </div>
+    <div class="task-board-grid" id="taskBoardGrid"></div>
+  </div>
+
+  <div class="panel" id="panel-workflow">
+    <div class="workflow-layout">
+      <div class="wf-left">
+        <div class="wf-head">
+          <div>
+            <div class="wf-title">Dura Workflow</div>
+            <div class="wf-sub">Follow one fixed process for every branding project.</div>
+          </div>
+          <select class="wf-project-select" id="workflowProjectSelect"></select>
+        </div>
+        <div class="wf-progress-track"><div class="wf-progress-fill" id="wfProgressFill" style="width:0%"></div></div>
+        <div class="wf-progress-text" id="wfProgressText">0 of 6 steps completed</div>
+        <div class="wf-steps" id="workflowSteps"></div>
+      </div>
+      <div class="wf-right" id="workflowDetails"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-checklist">
+    <div class="checklist-grid">
+      <div class="cl-card"><div class="cl-card-title">Client Evaluation</div>
+        <div class="cl-item"><input type="checkbox" id="c1"><label for="c1">Brand provides real value to customers</label></div>
+        <div class="cl-item"><input type="checkbox" id="c2"><label for="c2">Brand has clear growth potential</label></div>
+        <div class="cl-item"><input type="checkbox" id="c3"><label for="c3">Business vision is well defined</label></div>
+        <div class="cl-item"><input type="checkbox" id="c4"><label for="c4">Client is open to strategic direction</label></div>
+        <div class="cl-item"><input type="checkbox" id="c5"><label for="c5">Budget aligns with project scope</label></div>
+      </div>
+      <div class="cl-card"><div class="cl-card-title">Brand Research</div>
+        <div class="cl-item"><input type="checkbox" id="r1"><label for="r1">Competitor research completed</label></div>
+        <div class="cl-item"><input type="checkbox" id="r2"><label for="r2">Market positioning identified</label></div>
+        <div class="cl-item"><input type="checkbox" id="r3"><label for="r3">Target audience understood</label></div>
+        <div class="cl-item"><input type="checkbox" id="r4"><label for="r4">Brand tone & emotion defined</label></div>
+        <div class="cl-item"><input type="checkbox" id="r5"><label for="r5">Visual direction moodboard ready</label></div>
+      </div>
+      <div class="cl-card"><div class="cl-card-title">Project Kickoff</div>
+        <div class="cl-item"><input type="checkbox" id="k1"><label for="k1">Kickoff call completed</label></div>
+        <div class="cl-item"><input type="checkbox" id="k2"><label for="k2">Project scope signed off</label></div>
+        <div class="cl-item"><input type="checkbox" id="k3"><label for="k3">Advance invoice raised & paid</label></div>
+        <div class="cl-item"><input type="checkbox" id="k4"><label for="k4">Timeline shared with client</label></div>
+        <div class="cl-item"><input type="checkbox" id="k5"><label for="k5">Brand questionnaire received</label></div>
+      </div>
+      <div class="cl-card"><div class="cl-card-title">Final Delivery</div>
+        <div class="cl-item"><input type="checkbox" id="d1"><label for="d1">All deliverables reviewed internally</label></div>
+        <div class="cl-item"><input type="checkbox" id="d2"><label for="d2">Brand guidelines document ready</label></div>
+        <div class="cl-item"><input type="checkbox" id="d3"><label for="d3">Final assets packaged & sent</label></div>
+        <div class="cl-item"><input type="checkbox" id="d4"><label for="d4">Final invoice raised & cleared</label></div>
+        <div class="cl-item"><input type="checkbox" id="d5"><label for="d5">Client feedback collected</label></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-pm">
+    <div class="pm-header"><h3>My PM Checklist</h3><p>Your personal day-to-day checklist as Project Manager at Dura</p></div>
+    <div class="pm-grid" id="pmGrid"></div>
+  </div>
+  </div>
+</div>
+
+<!-- PROJECT TASKS (per-project detail) -->
+<div class="modal-overlay" id="projectTasksOverlay" aria-hidden="true">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <h3 id="projectTasksTitle">Project Tasks</h3>
+      <button type="button" class="modal-close" onclick="closeProjectTasks()" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="phase-filter" id="projectTaskPhaseFilter" style="margin-bottom:10px">
+        <button type="button" class="filter-btn active" data-ph="all">All</button>
+        <button type="button" class="filter-btn" data-ph="Strategy">Strategy</button>
+        <button type="button" class="filter-btn" data-ph="Color">Color</button>
+        <button type="button" class="filter-btn" data-ph="Visual">Visual</button>
+        <button type="button" class="filter-btn" data-ph="Delivery">Delivery</button>
+      </div>
+      <div class="task-list" id="projectTaskList"></div>
+      <div class="add-task-row">
+        <input class="add-task-input" id="projectNewTaskInput" placeholder="Add a task for this project..."/>
+        <select class="add-task-input" id="projectNewTaskPhase" style="max-width:130px">
+          <option>Strategy</option><option>Color</option><option>Visual</option><option>Delivery</option>
+        </select>
+        <button type="button" class="add-task-btn" onclick="addProjectTask()">+ Add</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-cancel" onclick="closeProjectTasks()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modalTitle">New Project</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Project Name</label><input id="mName" placeholder="e.g. Brand Identity Build"/></div>
+        <div class="form-group"><label>Client Name</label><input id="mClient" placeholder="e.g. Acme Co."/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Phase</label>
+          <select id="mPhase"><option>Strategy</option><option>Color System</option><option>Visual Direction</option><option>Delivery</option></select>
+        </div>
+        <div class="form-group"><label>Status</label>
+          <select id="mStatus"><option value="active">Active</option><option value="review">In Review</option><option value="done">Completed</option><option value="hold">On Hold</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Progress %</label><input id="mProgress" type="number" min="0" max="100" placeholder="0–100"/></div>
+        <div class="form-group"><label>Due Date</label><input id="mDue" type="date"/></div>
+      </div>
+      <div class="form-divider"></div>
+      <div class="form-section-label">✅ What Was Done</div>
+      <div class="form-group"><textarea id="mDone" placeholder="e.g. Brand strategy completed, color palette delivered, client approved moodboard..."></textarea></div>
+      <div class="form-section-label">⚠️ What Was Lagged / Missed</div>
+      <div class="form-group"><textarea id="mLag" placeholder="e.g. Delayed due to client feedback, typography pending, final assets not packaged..."></textarea></div>
+      <div class="form-divider"></div>
+      <div class="form-section-label">💰 Payment</div>
+      <div class="form-row">
+        <div class="form-group"><label>Advance Amount (₹)</label><input id="mAdvAmt" type="number" placeholder="e.g. 35000"/></div>
+        <div class="form-group"><label>Advance Status</label>
+          <div class="pay-status-row">
+            <div class="pay-status-opt"><input type="radio" name="advStatus" id="adv_paid" value="paid"><label for="adv_paid">✓ Paid</label></div>
+            <div class="pay-status-opt"><input type="radio" name="advStatus" id="adv_pending" value="pending" checked><label for="adv_pending">⏳ Pending</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Final Amount (₹)</label><input id="mFinAmt" type="number" placeholder="e.g. 35000"/></div>
+        <div class="form-group"><label>Final Status</label>
+          <div class="pay-status-row">
+            <div class="pay-status-opt"><input type="radio" name="finStatus" id="fin_paid" value="paid"><label for="fin_paid">✓ Paid</label></div>
+            <div class="pay-status-opt"><input type="radio" name="finStatus" id="fin_pending" value="pending" checked><label for="fin_pending">⏳ Pending</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-divider"></div>
+      <div class="form-section-label">📊 Revenue Share (2-Way Model)</div>
+      <div class="rev-grid">
+        <div class="rev-person-row"><div class="rev-avatar">D</div><div class="rev-person-info"><div class="rev-person-name-f">Dura</div><div class="rev-person-role-f">Company Growth & Operations</div></div><input class="rev-input" id="rDura" type="number" placeholder="₹ 0"/></div>
+        <div class="rev-person-row"><div class="rev-avatar">R</div><div class="rev-person-info"><div class="rev-person-name-f">Rohith</div><div class="rev-person-role-f">Project Manager</div></div><input class="rev-input" id="rRohith" type="number" placeholder="₹ 0"/></div>
+        <div class="rev-person-row"><div class="rev-avatar">G</div><div class="rev-person-info"><div class="rev-person-name-f">Gowshik</div><div class="rev-person-role-f">CEO · Brand Designer</div></div><input class="rev-input" id="rGowshik" type="number" placeholder="₹ 0"/></div>
+        <div class="rev-person-row"><div class="rev-avatar">P</div><div class="rev-person-info"><div class="rev-person-name-f">Prasanth</div><div class="rev-person-role-f">Strategist</div></div><input class="rev-input" id="rPrasanth" type="number" placeholder="₹ 0"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-save" onclick="saveProject()">Save Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteProjectOverlay" aria-hidden="true">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3>Delete Project</h3>
+      <button type="button" class="modal-close" onclick="closeDeleteProjectModal()" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="delete-help">This action will remove the project and all related tasks.<br/>To confirm, type <b>yes</b> below.</p>
+      <div class="form-group">
+        <label>Type yes to confirm</label>
+        <input id="deleteProjectConfirmInput" placeholder="yes"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-cancel" onclick="closeDeleteProjectModal()">Cancel</button>
+      <button type="button" class="modal-save danger" onclick="confirmDeleteProject()">Delete Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORKFLOW DOCUMENT MODAL -->
+<div class="modal-overlay" id="workflowDocOverlay" aria-hidden="true">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-header">
+      <h3 id="workflowDocTitle">Workflow Document</h3>
+      <button type="button" class="modal-close" onclick="closeWorkflowDocModal()" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="doc-title" id="workflowDocSub"></p>
+      <div class="doc-form" id="workflowDocForm"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-cancel" onclick="saveWorkflowDoc()">Save</button>
+      <button type="button" class="modal-save" onclick="downloadWorkflowDocPDF()">Download as PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT PREVIEW OVERLAY -->
+<div class="report-overlay" id="reportOverlay">
+  <div class="report-wrap">
+    <div class="report-toolbar">
+      <span>📄 Project Report Preview</span>
+      <div class="report-toolbar-btns">
+        <button class="rtbtn dl" id="reportDlBtn" onclick="printReport()">⬇ Download PDF</button>
+        <button class="rtbtn cl" onclick="closeReport()">✕ Close</button>
+      </div>
+    </div>
+    <div id="reportContent"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const PC={'Strategy':'#0E13AF','Color System':'#3A1BDB','Visual Direction':'#6366f1','Delivery':'#22c55e'};
+let projects=[
+  {id:1,name:'Brand Identity Build',client:'Nexus Studio',phase:'Visual Direction',status:'active',progress:65,due:'2026-04-20',done:'Brand strategy completed. Color palette delivered and approved. Moodboard finalized with client.',lag:'Typography selection delayed. Final asset packaging not started yet.',advAmt:35000,advStatus:'paid',finAmt:35000,finStatus:'pending',rDura:14000,rRohith:7000,rGowshik:10500,rPrasanth:3500},
+  {id:2,name:'Color & Emotion System',client:'Bloom Co.',phase:'Color System',status:'review',progress:85,due:'2026-04-10',done:'Primary and secondary color palette built. Emotional language framework defined.',lag:'Final documentation not submitted. Client review feedback pending.',advAmt:15000,advStatus:'paid',finAmt:15000,finStatus:'pending',rDura:6000,rRohith:3000,rGowshik:4500,rPrasanth:1500},
+  {id:3,name:'Brand Strategy Sprint',client:'Orbit Labs',phase:'Strategy',status:'active',progress:30,due:'2026-05-01',done:'Kickoff call done. Brand questionnaire received.',lag:'Competitor research not started. Audience mapping delayed due to missing client inputs.',advAmt:12000,advStatus:'pending',finAmt:12000,finStatus:'pending',rDura:0,rRohith:0,rGowshik:0,rPrasanth:0},
+  {id:4,name:'Visual Direction Guide',client:'Pebble Brand',phase:'Delivery',status:'done',progress:100,due:'2026-03-28',done:'All brand deliverables completed. Style guide, typography, color, and moodboard delivered. Client signed off.',lag:'None — project delivered on time and within scope.',advAmt:18000,advStatus:'paid',finAmt:18000,finStatus:'paid',rDura:7200,rRohith:3600,rGowshik:5400,rPrasanth:1800},
+];
+let tasks=[
+  {id:1,projectId:1,text:'Define brand positioning',phase:'Strategy',done:true},
+  {id:2,projectId:1,text:'Audience mapping & research',phase:'Strategy',done:true},
+  {id:3,projectId:1,text:'Competitor analysis report',phase:'Strategy',done:false},
+  {id:4,projectId:1,text:'Build primary color palette',phase:'Color',done:true},
+  {id:5,projectId:1,text:'Define emotional color language',phase:'Color',done:false},
+  {id:6,projectId:1,text:'Create moodboard & style guide',phase:'Visual',done:false},
+  {id:7,projectId:1,text:'Typography hierarchy setup',phase:'Visual',done:false},
+  {id:8,projectId:1,text:'Package & deliver final assets',phase:'Delivery',done:false},
+  {id:9,projectId:2,text:'Finalize secondary palette & documentation',phase:'Color',done:false},
+  {id:10,projectId:2,text:'Prepare client review deck',phase:'Visual',done:true},
+  {id:11,projectId:3,text:'Stakeholder discovery interviews',phase:'Strategy',done:true},
+  {id:12,projectId:3,text:'Positioning workshop session',phase:'Strategy',done:false},
+  {id:13,projectId:4,text:'Archive & handoff packaged assets',phase:'Delivery',done:true},
+];
+const pmSections=[
+  {icon:'🌅',title:'Daily Startup',items:[{label:'Check all active project statuses',note:'Review progress before starting work'},{label:'Review today\'s deadlines & due tasks',note:'Prioritize based on urgency'},{label:'Check client messages & emails',note:'Respond within 2 hours'},{label:'Update task board with today\'s plan',note:'Add or move tasks for the day'}]},
+  {icon:'🤝',title:'Client Onboarding',items:[{label:'Send welcome email with project timeline',note:'Include kickoff call invite'},{label:'Collect brand questionnaire from client',note:'Understand vision, audience, competitors'},{label:'Evaluate client using Dura checklist',note:'Confirm brand value and budget fit'},{label:'Raise and confirm advance invoice',note:'50% advance before project starts'},{label:'Set expectations on revision rounds',note:'Communicate scope and revision limits'}]},
+  {icon:'⚙️',title:'Project Execution',items:[{label:'Brief the team on project requirements',note:'Share client inputs and strategic direction'},{label:'Review strategy deliverable before sharing',note:'Check positioning and clarity'},{label:'Review color and visual work internally',note:'Ensure brand guideline alignment'},{label:'Share deliverable with client for feedback',note:'Explain decisions made'},{label:'Track feedback and manage revision rounds',note:'Log changes and confirm approval'}]},
+  {icon:'💰',title:'Payment Follow-up',items:[{label:'Confirm advance payment before starting',note:'Do not begin without advance'},{label:'Send final invoice upon completion',note:'Full breakdown of services'},{label:'Follow up on pending payments',note:'Polite reminder after 3 days'},{label:'Mark payment status in tracker',note:'Update advance and final status'},{label:'Issue payment receipt to client',note:'Confirm once full payment received'}]},
+  {icon:'📦',title:'Project Delivery',items:[{label:'Final internal quality check done',note:'Review all files before sending'},{label:'Brand guidelines PDF prepared',note:'Colors, fonts, tone, usage rules'},{label:'All assets packaged and labeled clearly',note:'Organize by category'},{label:'Deliver assets via agreed channel',note:'Drive link, email, or portal'},{label:'Collect client testimonial or feedback',note:'Use for portfolio or case study'}]},
+];
+let pmState={},editId=null,activeTaskProjectId=null,projectTaskFilter='all',pendingDeleteProjectId=null;
+const workflowStages=[
+  {
+    id:'Discovery',
+    checklist:['Client call completed','Business brief received','Target audience clarified','Timeline discussed with client'],
+    docs:['Client Brief'],
+    guidance:{
+      instruction:'Gather business context, constraints, objectives, and expectations before proposing any creative route.',
+      communication:'Call when requirements are unclear or high-priority. Use message/email for sharing meeting notes and confirmations.'
+    }
+  },
+  {
+    id:'Proposal',
+    checklist:['Scope finalized','Timeline shared','Proposal reviewed internally','Quotation approved by client'],
+    docs:['Proposal Doc','Quotation'],
+    guidance:{
+      instruction:'Define deliverables, timeline, revisions, and commercials clearly to avoid future conflict.',
+      communication:'Use a call for negotiation. Send final proposal and quotation by email/message for written approval.'
+    }
+  },
+  {
+    id:'Strategy',
+    checklist:['Brand positioning drafted','Competitor scan complete','Tone and messaging approved','Moodboard direction aligned'],
+    docs:['Brand Strategy','Moodboard'],
+    guidance:{
+      instruction:'Translate business objectives into a sharp brand strategy and visual direction before design starts.',
+      communication:'Call for strategic alignment; send summarized strategic decisions in written form.'
+    }
+  },
+  {
+    id:'Design',
+    checklist:['Concept options prepared','Internal quality review done','Presentation deck ready','Client review meeting completed'],
+    docs:['Concept Presentation'],
+    guidance:{
+      instruction:'Develop high-quality concept outputs aligned to strategy, then present rationale with confidence.',
+      communication:'Call/video for concept walkthrough. Send recap with decisions and next actions.'
+    }
+  },
+  {
+    id:'Revision',
+    checklist:['Feedback collected in one list','Revision round planned','Changes completed','Final approval received'],
+    docs:['Revision Log'],
+    guidance:{
+      instruction:'Consolidate client feedback and close revisions systematically without scope drift.',
+      communication:'Call for conflicting feedback. Use written tracker for accepted/rejected revision points.'
+    }
+  },
+  {
+    id:'Delivery',
+    checklist:['Brand guidelines finalized','Final assets packaged','Final invoice shared','Handover completed'],
+    docs:['Brand Guidelines','Final Assets'],
+    guidance:{
+      instruction:'Deliver all approved assets in an organized, professional package and close project formally.',
+      communication:'Call for final handoff support if needed; send delivery links and closure note by email.'
+    }
+  }
+];
+const workflowDocTemplates={
+  'Client Brief':[
+    {key:'projectName',label:'Project Name',type:'text'},
+    {key:'businessOverview',label:'Business Overview',type:'textarea'},
+    {key:'targetAudience',label:'Target Audience',type:'textarea'},
+    {key:'goals',label:'Project Goals',type:'textarea'}
+  ],
+  'Proposal Doc':[
+    {key:'scope',label:'Scope of Work',type:'textarea'},
+    {key:'deliverables',label:'Deliverables',type:'textarea'},
+    {key:'timeline',label:'Timeline',type:'text'},
+    {key:'revisionPolicy',label:'Revision Policy',type:'textarea'}
+  ],
+  'Quotation':[
+    {key:'serviceBreakdown',label:'Service Breakdown',type:'textarea'},
+    {key:'amount',label:'Total Amount',type:'text'},
+    {key:'paymentTerms',label:'Payment Terms',type:'textarea'},
+    {key:'validUntil',label:'Quote Valid Until',type:'text'}
+  ],
+  'Brand Strategy':[
+    {key:'positioning',label:'Brand Positioning',type:'textarea'},
+    {key:'voiceTone',label:'Voice & Tone',type:'textarea'},
+    {key:'keyMessages',label:'Key Messages',type:'textarea'}
+  ],
+  'Moodboard':[
+    {key:'visualDirection',label:'Visual Direction',type:'textarea'},
+    {key:'colorCues',label:'Color Cues',type:'textarea'},
+    {key:'referenceLinks',label:'Reference Links',type:'textarea'}
+  ],
+  'Concept Presentation':[
+    {key:'conceptName',label:'Concept Name',type:'text'},
+    {key:'conceptSummary',label:'Concept Summary',type:'textarea'},
+    {key:'rationale',label:'Design Rationale',type:'textarea'}
+  ],
+  'Revision Log':[
+    {key:'feedbackItems',label:'Feedback Items',type:'textarea'},
+    {key:'changesDone',label:'Changes Completed',type:'textarea'},
+    {key:'pending',label:'Pending/Deferred',type:'textarea'}
+  ],
+  'Brand Guidelines':[
+    {key:'logoUsage',label:'Logo Usage',type:'textarea'},
+    {key:'typography',label:'Typography',type:'textarea'},
+    {key:'colorSystem',label:'Color System',type:'textarea'}
+  ],
+  'Final Assets':[
+    {key:'assetsList',label:'Assets List',type:'textarea'},
+    {key:'deliveryLink',label:'Delivery Link',type:'text'},
+    {key:'handoverNotes',label:'Handover Notes',type:'textarea'}
+  ]
+};
+let workflowState={};
+let workflowCurrentProjectId=null;
+let workflowCurrentStep='Discovery';
+let activeWorkflowDoc=null;
+
+function fmt(n){return n?'₹'+Number(n).toLocaleString('en-IN'):'—';}
+function escapeHtml(s){
+  const d=document.createElement('div');
+  d.textContent=s==null?'':String(s);
+  return d.innerHTML;
+}
+
+function renderProjects(){
+  const tot=projects.reduce((s,p)=>s+(+p.rDura||0)+(+p.rRohith||0)+(+p.rGowshik||0)+(+p.rPrasanth||0),0);
+  document.getElementById('statTotal').innerText=projects.length;
+  document.getElementById('statActive').innerText=projects.filter(p=>p.status==='active').length;
+  document.getElementById('statReview').innerText=projects.filter(p=>p.status==='review').length;
+  document.getElementById('statDone').innerText=projects.filter(p=>p.status==='done').length;
+  document.getElementById('statRev').innerText=fmt(tot);
+  document.getElementById('projectsList').innerHTML=projects.map(p=>{
+    const people=[{n:'Dura',r:'Company',a:p.rDura},{n:'Rohith',r:'PM',a:p.rRohith},{n:'Gowshik',r:'CEO',a:p.rGowshik},{n:'Prasanth',r:'Strategist',a:p.rPrasanth}];
+    return `<div class="proj-card">
+      <div class="proj-color" style="background:${PC[p.phase]||'#6366f1'}"></div>
+      <div class="proj-info"><div class="proj-name">${escapeHtml(p.name)}</div><div class="proj-client">${escapeHtml(p.client)}</div><div class="proj-phase" style="color:${PC[p.phase]||'#6366f1'}">${escapeHtml(p.phase)}</div></div>
+      <div class="proj-progress"><div class="prog-label">Progress</div><div class="prog-bar"><div class="prog-fill" style="width:${p.progress}%"></div></div><div class="prog-pct">${p.progress}% complete</div></div>
+      <div class="pay-mini"><div class="pay-mini-title">Payment</div>
+        <div class="pay-row"><span class="pay-lbl">Advance</span><span class="pay-chip ${p.advStatus}">${p.advStatus==='paid'?'Paid':'Pending'}</span></div>
+        <div class="pay-row"><span class="pay-amt">${fmt(p.advAmt)}</span></div>
+        <div class="pay-row"><span class="pay-lbl">Final</span><span class="pay-chip ${p.finStatus}">${p.finStatus==='paid'?'Paid':'Pending'}</span></div>
+        <div class="pay-row"><span class="pay-amt">${fmt(p.finAmt)}</span></div>
+      </div>
+      <div class="rev-mini"><div class="rev-mini-title">Revenue Share</div>
+        ${people.map((pe,i)=>`${i>0?'<div class="rev-div"></div>':''}<div class="rev-person"><div><span class="rev-pname">${pe.n}</span><span class="rev-prole" style="font-size:9px;color:var(--gm);margin-left:4px">${pe.r}</span></div><span class="rev-pamt">${fmt(pe.a)}</span></div>`).join('')}
+      </div>
+      <div class="proj-meta"><span class="badge ${p.status}">${{active:'Active',review:'In Review',done:'Completed',hold:'On Hold'}[p.status]}</span><span class="proj-due">Due ${p.due||'—'}</span></div>
+      <div class="proj-actions">
+        <button type="button" class="act-btn" onclick="openProjectTasks(${p.id})">Tasks</button>
+        <button type="button" class="act-btn report" onclick="showReport(${p.id})">📄 Report</button>
+        <button type="button" class="act-btn" onclick="editProject(${p.id})">Edit</button>
+        <button type="button" class="act-btn danger" onclick="requestDeleteProject(${p.id})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildReportHTML(pList){
+  const now=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  let html=`<div class="rc-header">
+    <div><div class="rc-brand">DURA</div><div class="rc-brand-sub">Brand Building System</div></div>
+    <div class="rc-title-block"><div class="rc-title">Project Report</div><div class="rc-date">Generated on ${now}</div></div>
+  </div>`;
+  pList.forEach(p=>{
+    const ptasks=tasks.filter(t=>t.projectId===p.id);
+    const doneTasks=ptasks.filter(t=>t.done);
+    const pendTasks=ptasks.filter(t=>!t.done);
+    const people=[{n:'Dura',r:'Company Growth & Ops',a:p.rDura},{n:'Rohith',r:'Project Manager',a:p.rRohith},{n:'Gowshik',r:'CEO · Brand Designer',a:p.rGowshik},{n:'Prasanth',r:'Strategist',a:p.rPrasanth}];
+    const totalRev=(+p.rDura||0)+(+p.rRohith||0)+(+p.rGowshik||0)+(+p.rPrasanth||0);
+    html+=`<div class="rc-proj-block">
+      <div class="rc-proj-top">
+        <div><div class="rc-proj-name">${escapeHtml(p.name)}</div><div class="rc-proj-client">Client: ${escapeHtml(p.client)} &nbsp;·&nbsp; Phase: ${escapeHtml(p.phase)} &nbsp;·&nbsp; Due: ${escapeHtml(p.due||'—')}</div></div>
+        <span class="rc-status-chip ${p.status}">${{active:'Active',review:'In Review',done:'Completed',hold:'On Hold'}[p.status]}</span>
+      </div>
+      <div class="rc-grid">
+        <div class="rc-box"><div class="rc-box-title">Overall Progress</div>
+          <div class="rc-prog-bar"><div class="rc-prog-fill" style="width:${p.progress}%"></div></div>
+          <div class="rc-prog-pct">${p.progress}% Complete</div>
+        </div>
+        <div class="rc-box"><div class="rc-box-title">Payment Status</div>
+          <div class="rc-pay-row"><span class="rc-pay-lbl">Advance</span><div style="display:flex;align-items:center;gap:6px"><span class="rc-pay-val">${fmt(p.advAmt)}</span><span class="rc-pay-status ${p.advStatus}">${p.advStatus==='paid'?'Paid':'Pending'}</span></div></div>
+          <div class="rc-pay-row"><span class="rc-pay-lbl">Final</span><div style="display:flex;align-items:center;gap:6px"><span class="rc-pay-val">${fmt(p.finAmt)}</span><span class="rc-pay-status ${p.finStatus}">${p.finStatus==='paid'?'Paid':'Pending'}</span></div></div>
+        </div>
+      </div>
+      <div class="rc-section"><div class="rc-section-title">Revenue Share — 2-Way Model</div>
+        ${people.map(pe=>`<div class="rc-rev-row"><div><div class="rc-rev-name">${pe.n}</div><div class="rc-rev-role">${pe.r}</div></div><div class="rc-rev-amt">${fmt(pe.a)}</div></div>`).join('')}
+        <div class="rc-rev-row" style="margin-top:6px;padding-top:8px;border-top:2px solid #EDEFF2"><div><div class="rc-rev-name" style="font-size:13px">Total Revenue</div></div><div class="rc-rev-amt" style="font-size:15px">${fmt(totalRev)}</div></div>
+      </div>
+      <div class="rc-section"><div class="rc-section-title">Task Overview</div>
+        <div style="display:flex;gap:12px;margin-bottom:10px">
+          <div style="background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.2);border-radius:8px;padding:8px 14px;font-size:12px"><span style="font-weight:700;color:#15803d">${doneTasks.length}</span> <span style="color:#6B7280">Completed</span></div>
+          <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:8px 14px;font-size:12px"><span style="font-weight:700;color:#854d0e">${pendTasks.length}</span> <span style="color:#6B7280">Pending</span></div>
+        </div>
+        <div class="rc-tasks-grid">
+          ${doneTasks.slice(0,4).map(t=>`<div class="rc-task-item"><div class="rc-task-dot done"></div><div class="rc-task-txt done-txt">${escapeHtml(t.text)}</div></div>`).join('')}
+          ${pendTasks.slice(0,4).map(t=>`<div class="rc-task-item"><div class="rc-task-dot pending"></div><div class="rc-task-txt">${escapeHtml(t.text)}</div></div>`).join('')}
+        </div>
+      </div>
+      <div class="rc-section"><div class="rc-section-title">Process Review</div>
+        <div class="rc-what-done"><div class="rc-wl-title green">✅ What Was Done</div><div class="rc-wl-text">${escapeHtml(p.done||'No notes added yet.')}</div></div>
+        <div style="height:8px"></div>
+        <div class="rc-what-lag"><div class="rc-wl-title red">⚠️ What Was Lagged / Missed</div><div class="rc-wl-text">${escapeHtml(p.lag||'No lags recorded.')}</div></div>
+      </div>
+    </div>`;
+  });
+  html+=`<div class="rc-footer"><div class="rc-footer-brand">DURA</div><div class="rc-footer-msg">Brands that move people.</div></div>`;
+  return html;
+}
+
+function showReport(id){
+  const p=projects.find(p=>p.id===id);
+  document.getElementById('reportContent').innerHTML=buildReportHTML([p]);
+  document.getElementById('reportOverlay').classList.add('open');
+}
+
+function downloadAllReport(){
+  document.getElementById('reportContent').innerHTML=buildReportHTML(projects);
+  document.getElementById('reportOverlay').classList.add('open');
+}
+
+function closeReport(){document.getElementById('reportOverlay').classList.remove('open');}
+
+function fixReportNodeForCanvas(root){
+  root.querySelectorAll('.rc-brand,.rc-footer-brand').forEach(el=>{
+    el.style.setProperty('background','none','important');
+    el.style.setProperty('-webkit-background-clip','unset');
+    el.style.setProperty('background-clip','unset');
+    el.style.setProperty('-webkit-text-fill-color','#0E13AF');
+    el.style.setProperty('color','#0E13AF');
+    el.style.fontWeight='800';
+  });
+  root.querySelectorAll('.rc-rev-amt').forEach(el=>{
+    el.style.setProperty('background','none','important');
+    el.style.setProperty('-webkit-background-clip','unset');
+    el.style.setProperty('background-clip','unset');
+    el.style.setProperty('-webkit-text-fill-color','#3A1BDB');
+    el.style.setProperty('color','#3A1BDB');
+    el.style.fontWeight='700';
+  });
+  root.querySelectorAll('.rc-prog-fill').forEach(el=>{
+    el.style.setProperty('background','#3A1BDB');
+    el.style.setProperty('background-image','none');
+  });
+}
+
+async function printReport(){
+  const btn=document.getElementById('reportDlBtn');
+  btn.disabled=true;btn.innerText='⏳ Generating...';
+  const toolbar=document.querySelector('.report-toolbar');
+  toolbar.style.display='none';
+  const {jsPDF}=window.jspdf;
+  try{
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    const el=document.getElementById('reportContent');
+    const scrollY=window.scrollY;
+    window.scrollTo(0,0);
+    const canvas=await html2canvas(el,{
+      scale:Math.min(2.5,window.devicePixelRatio||2),
+      useCORS:true,
+      backgroundColor:'#ffffff',
+      logging:false,
+      imageTimeout:15000,
+      foreignObjectRendering:false,
+      onclone(clonedDoc){
+        const node=clonedDoc.getElementById('reportContent');
+        if(node)fixReportNodeForCanvas(node);
+      }
+    });
+    window.scrollTo(0,scrollY);
+    const imgData=canvas.toDataURL('image/png',1.0);
+    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+    const pw=pdf.internal.pageSize.getWidth();
+    const ph=pdf.internal.pageSize.getHeight();
+    const ih=(canvas.height*pw)/canvas.width;
+    let y=0;
+    while(y+1e-3<ih){
+      if(y>0)pdf.addPage();
+      pdf.addImage(imgData,'PNG',0,-y,pw,ih);
+      y+=ph;
+    }
+    pdf.save('Dura_Project_Report.pdf');
+  }catch(e){console.error(e);alert('Failed to generate PDF.');}
+  toolbar.style.display='flex';
+  btn.disabled=false;btn.innerText='⬇ Download PDF';
+}
+
+function tasksForProject(pid){return tasks.filter(t=>t.projectId===pid);}
+
+function renderTaskBoard(){
+  const grid=document.getElementById('taskBoardGrid');
+  if(!grid)return;
+  grid.innerHTML=projects.map(p=>{
+    const pts=tasksForProject(p.id);
+    const doneC=pts.filter(t=>t.done).length;
+    const total=pts.length;
+    return `<button type="button" class="tb-card" onclick="openProjectTasks(${p.id})" aria-label=${JSON.stringify('Open tasks for '+p.name)}>
+      <div class="tb-card-top">
+        <div class="tb-card-strip" style="background:${PC[p.phase]||'#6366f1'}"></div>
+        <div>
+          <div class="tb-card-title">${escapeHtml(p.name)}</div>
+          <div class="tb-card-client">${escapeHtml(p.client)}</div>
+        </div>
+      </div>
+      <div class="tb-card-meta">
+        <span class="tb-chip done">${doneC} done</span>
+        <span class="tb-chip pend">${Math.max(0,total-doneC)} open</span>
+        <span>${total} task${total!==1?'s':''}</span>
+      </div>
+      <div class="tb-open-hint">Open task list →</div>
+    </button>`;
+  }).join('');
+}
+
+function setProjectTaskFilter(ph,btn){
+  projectTaskFilter=ph;
+  const wrap=document.getElementById('projectTaskPhaseFilter');
+  if(wrap)wrap.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderProjectTasks();
+}
+
+function openProjectTasks(pid){
+  const p=projects.find(x=>x.id===pid);
+  if(!p)return;
+  activeTaskProjectId=pid;
+  projectTaskFilter='all';
+  document.getElementById('projectTasksTitle').textContent=p.name;
+  const wrap=document.getElementById('projectTaskPhaseFilter');
+  if(wrap){
+    wrap.querySelectorAll('.filter-btn').forEach(b=>{
+      b.classList.toggle('active',b.getAttribute('data-ph')==='all');
+      b.onclick=function(){setProjectTaskFilter(b.getAttribute('data-ph'),b);};
+    });
+  }
+  document.getElementById('projectNewTaskInput').value='';
+  document.getElementById('projectTasksOverlay').classList.add('open');
+  document.getElementById('projectTasksOverlay').setAttribute('aria-hidden','false');
+  renderProjectTasks();
+}
+
+function closeProjectTasks(){
+  activeTaskProjectId=null;
+  document.getElementById('projectTasksOverlay').classList.remove('open');
+  document.getElementById('projectTasksOverlay').setAttribute('aria-hidden','true');
+  renderTaskBoard();
+}
+
+function renderProjectTasks(){
+  const listEl=document.getElementById('projectTaskList');
+  if(!listEl||activeTaskProjectId==null)return;
+  let list=tasksForProject(activeTaskProjectId);
+  if(projectTaskFilter!=='all')list=list.filter(t=>t.phase===projectTaskFilter);
+  listEl.innerHTML=list.length?list.map(t=>`
+    <div class="task-item">
+      <div class="task-check ${t.done?'checked':''}" role="button" tabindex="0" onclick="toggleProjectTask(${t.id})" onkeydown="if(event.key==='Enter'||event.key===' ')toggleProjectTask(${t.id})"></div>
+      <div class="task-text ${t.done?'done':''}">${escapeHtml(t.text)}</div>
+      <span class="task-phase-tag">${t.phase}</span>
+      <button type="button" class="act-btn danger" onclick="deleteProjectTask(${t.id})">✕</button>
+    </div>`).join(''):'<p style="font-size:13px;color:var(--gm);padding:12px 0">No tasks in this filter. Add one below.</p>';
+}
+
+function toggleProjectTask(id){
+  const t=tasks.find(x=>x.id===id);
+  if(t&&t.projectId===activeTaskProjectId){t.done=!t.done;renderProjectTasks();}
+}
+function deleteProjectTask(id){
+  tasks=tasks.filter(t=>t.id!==id);
+  renderProjectTasks();
+}
+
+function addProjectTask(){
+  if(activeTaskProjectId==null)return;
+  const txt=document.getElementById('projectNewTaskInput').value.trim();
+  const phase=document.getElementById('projectNewTaskPhase').value;
+  if(!txt)return;
+  tasks.push({id:Date.now(),projectId:activeTaskProjectId,text:txt,phase,done:false});
+  document.getElementById('projectNewTaskInput').value='';
+  renderProjectTasks();
+}
+
+function ensureWorkflowProjectState(pid){
+  if(!pid)return;
+  if(!workflowState[pid]){
+    workflowState[pid]={};
+    workflowStages.forEach(st=>{
+      workflowState[pid][st.id]={status:'not_started',notes:'',checks:{},docs:{}};
+    });
+  }
+}
+function getWorkflowStepState(pid,stepId){
+  ensureWorkflowProjectState(pid);
+  return workflowState[pid][stepId];
+}
+function renderWorkflowProjectOptions(){
+  const select=document.getElementById('workflowProjectSelect');
+  if(!select)return;
+  if(!projects.length){
+    select.innerHTML='<option value="">No projects available</option>';
+    workflowCurrentProjectId=null;
+    return;
+  }
+  if(!workflowCurrentProjectId||!projects.find(p=>p.id===workflowCurrentProjectId)){
+    workflowCurrentProjectId=projects[0].id;
+  }
+  select.innerHTML=projects.map(p=>`<option value="${p.id}" ${p.id===workflowCurrentProjectId?'selected':''}>${escapeHtml(p.name)}</option>`).join('');
+}
+function renderWorkflowProgress(){
+  const fill=document.getElementById('wfProgressFill');
+  const txt=document.getElementById('wfProgressText');
+  if(!fill||!txt||!workflowCurrentProjectId)return;
+  const completed=workflowStages.filter(st=>getWorkflowStepState(workflowCurrentProjectId,st.id).status==='completed').length;
+  const pct=Math.round((completed/workflowStages.length)*100);
+  fill.style.width=pct+'%';
+  txt.textContent=`${completed} of ${workflowStages.length} steps completed`;
+}
+function renderWorkflowSteps(){
+  const wrap=document.getElementById('workflowSteps');
+  if(!wrap||!workflowCurrentProjectId)return;
+  wrap.innerHTML=workflowStages.map((st,idx)=>{
+    const state=getWorkflowStepState(workflowCurrentProjectId,st.id);
+    return `<button type="button" class="wf-step ${workflowCurrentStep===st.id?'active':''}" onclick="setWorkflowStep('${st.id}')">
+      <div class="wf-step-left">
+        <span class="wf-step-no">${idx+1}</span>
+        <span class="wf-step-name">${st.id}</span>
+      </div>
+      <span class="wf-status ${state.status}">${state.status.replace('_',' ')}</span>
+    </button>`;
+  }).join('');
+}
+function setWorkflowStep(stepId){
+  workflowCurrentStep=stepId;
+  renderWorkflowSteps();
+  renderWorkflowDetails();
+}
+function setWorkflowStatus(status){
+  if(!workflowCurrentProjectId)return;
+  getWorkflowStepState(workflowCurrentProjectId,workflowCurrentStep).status=status;
+  renderWorkflowSteps();
+  renderWorkflowDetails();
+  renderWorkflowProgress();
+}
+function toggleWorkflowChecklist(idx,checked){
+  if(!workflowCurrentProjectId)return;
+  const stepState=getWorkflowStepState(workflowCurrentProjectId,workflowCurrentStep);
+  stepState.checks[idx]=checked;
+  const stage=workflowStages.find(s=>s.id===workflowCurrentStep);
+  const doneCount=stage.checklist.filter((_,i)=>stepState.checks[i]).length;
+  if(doneCount===stage.checklist.length&&stage.checklist.length>0)stepState.status='completed';
+  else if(doneCount>0&&stepState.status==='not_started')stepState.status='in_progress';
+  renderWorkflowSteps();
+  renderWorkflowProgress();
+}
+function updateWorkflowNotes(val){
+  if(!workflowCurrentProjectId)return;
+  getWorkflowStepState(workflowCurrentProjectId,workflowCurrentStep).notes=val;
+}
+function openWorkflowDoc(docName){
+  if(!workflowCurrentProjectId)return;
+  activeWorkflowDoc=docName;
+  const project=projects.find(p=>p.id===workflowCurrentProjectId);
+  document.getElementById('workflowDocTitle').textContent=docName;
+  document.getElementById('workflowDocSub').textContent=`${project?project.name:'Project'} · ${workflowCurrentStep}`;
+  const stepState=getWorkflowStepState(workflowCurrentProjectId,workflowCurrentStep);
+  const docData=stepState.docs[docName]||{};
+  const fields=workflowDocTemplates[docName]||[{key:'notes',label:'Notes',type:'textarea'}];
+  const form=document.getElementById('workflowDocForm');
+  form.innerHTML=fields.map(f=>`<div class="form-group"><label>${f.label}</label>${f.type==='textarea'?`<textarea data-doc-field="${f.key}">${escapeHtml(docData[f.key]||'')}</textarea>`:`<input data-doc-field="${f.key}" value="${escapeHtml(docData[f.key]||'')}"/>`}</div>`).join('');
+  document.getElementById('workflowDocOverlay').classList.add('open');
+  document.getElementById('workflowDocOverlay').setAttribute('aria-hidden','false');
+}
+function closeWorkflowDocModal(){
+  activeWorkflowDoc=null;
+  document.getElementById('workflowDocOverlay').classList.remove('open');
+  document.getElementById('workflowDocOverlay').setAttribute('aria-hidden','true');
+}
+function saveWorkflowDoc(){
+  if(!workflowCurrentProjectId||!activeWorkflowDoc)return;
+  const stepState=getWorkflowStepState(workflowCurrentProjectId,workflowCurrentStep);
+  const data={};
+  document.querySelectorAll('#workflowDocForm [data-doc-field]').forEach(el=>{
+    data[el.getAttribute('data-doc-field')]=el.value.trim();
+  });
+  stepState.docs[activeWorkflowDoc]=data;
+  if(stepState.status==='not_started')stepState.status='in_progress';
+  renderWorkflowSteps();
+  renderWorkflowProgress();
+  alert('Document saved.');
+}
+function downloadWorkflowDocPDF(){
+  if(!workflowCurrentProjectId||!activeWorkflowDoc)return;
+  saveWorkflowDoc();
+  const {jsPDF}=window.jspdf;
+  const stepState=getWorkflowStepState(workflowCurrentProjectId,workflowCurrentStep);
+  const data=stepState.docs[activeWorkflowDoc]||{};
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const project=projects.find(p=>p.id===workflowCurrentProjectId);
+  let y=16;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(15);
+  doc.text(activeWorkflowDoc,14,y);y+=7;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(11);
+  doc.text(`Project: ${project?project.name:'—'} | Step: ${workflowCurrentStep}`,14,y);y+=8;
+  const fields=workflowDocTemplates[activeWorkflowDoc]||[{key:'notes',label:'Notes',type:'textarea'}];
+  fields.forEach(f=>{
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text(f.label,14,y);y+=5;
+    doc.setFont('helvetica','normal');
+    const body=(data[f.key]||'—').toString();
+    const lines=doc.splitTextToSize(body,182);
+    doc.text(lines,14,y);
+    y+=Math.max(7,lines.length*5+3);
+    if(y>275){doc.addPage();y=16;}
+  });
+  doc.save(`${(project?project.name:'Dura').replace(/\s+/g,'_')}_${activeWorkflowDoc.replace(/\s+/g,'_')}.pdf`);
+}
+function renderWorkflowDetails(){
+  const box=document.getElementById('workflowDetails');
+  if(!box||!workflowCurrentProjectId)return;
+  const stage=workflowStages.find(s=>s.id===workflowCurrentStep)||workflowStages[0];
+  const state=getWorkflowStepState(workflowCurrentProjectId,stage.id);
+  box.innerHTML=`<div>
+    <div class="wf-panel-title">${stage.id}</div>
+    <div class="wf-panel-sub">Step guidance and execution tools.</div>
+    <div class="wf-section">
+      <h4>Status</h4>
+      <div class="wf-status-actions">
+        <button type="button" class="wf-st-btn ${state.status==='not_started'?'active':''}" onclick="setWorkflowStatus('not_started')">Not Started</button>
+        <button type="button" class="wf-st-btn ${state.status==='in_progress'?'active':''}" onclick="setWorkflowStatus('in_progress')">In Progress</button>
+        <button type="button" class="wf-st-btn ${state.status==='completed'?'active':''}" onclick="setWorkflowStatus('completed')">Completed</button>
+      </div>
+    </div>
+    <div class="wf-section">
+      <h4>Checklist</h4>
+      <div class="wf-checklist">
+        ${stage.checklist.map((item,i)=>`<div class="wf-cl-item"><input type="checkbox" ${state.checks[i]?'checked':''} onchange="toggleWorkflowChecklist(${i},this.checked)"/><label>${item}</label></div>`).join('')}
+      </div>
+    </div>
+    <div class="wf-section">
+      <h4>Documents</h4>
+      <div class="wf-actions">${stage.docs.map(d=>`<button type="button" class="wf-doc-btn" onclick="openWorkflowDoc('${d}')">${d}</button>`).join('')}</div>
+    </div>
+    <div class="wf-section">
+      <h4>Instructions</h4>
+      <div class="wf-tip-card">${stage.guidance.instruction}</div>
+    </div>
+    <div class="wf-section">
+      <h4>Communication Tip</h4>
+      <div class="wf-tip-card">${stage.guidance.communication}</div>
+    </div>
+    <div class="wf-section">
+      <h4>Notes</h4>
+      <textarea class="wf-note" oninput="updateWorkflowNotes(this.value)" placeholder="Add project notes for this step...">${escapeHtml(state.notes||'')}</textarea>
+    </div>
+  </div>`;
+}
+function renderWorkflow(){
+  renderWorkflowProjectOptions();
+  if(!workflowCurrentProjectId){document.getElementById('workflowDetails').innerHTML='<p class="wf-sub">Create a project to start workflow.</p>';return;}
+  ensureWorkflowProjectState(workflowCurrentProjectId);
+  if(!workflowStages.find(s=>s.id===workflowCurrentStep))workflowCurrentStep=workflowStages[0].id;
+  renderWorkflowSteps();
+  renderWorkflowDetails();
+  renderWorkflowProgress();
+}
+
+function renderPM(){
+  document.getElementById('pmGrid').innerHTML=pmSections.map((sec,si)=>{
+    const chk=sec.items.filter((_,ii)=>pmState[`${si}-${ii}`]).length;
+    const pct=Math.round(chk/sec.items.length*100);
+    return `<div class="pm-section ${si===0?'open':''}" id="pmSec${si}">
+      <div class="pm-section-head" onclick="togglePMSec(${si})">
+        <div class="pm-section-head-left"><div class="pm-sec-icon">${sec.icon}</div><div><div class="pm-sec-title">${sec.title}</div><div class="pm-sec-prog">${chk}/${sec.items.length} completed</div></div></div>
+        <div class="pm-sec-arrow">▼</div>
+      </div>
+      <div class="pm-prog-bar"><div class="pm-prog-fill" style="width:${pct}%"></div></div>
+      <div class="pm-items">${sec.items.map((item,ii)=>`
+        <div class="pm-item">
+          <input type="checkbox" id="pm-${si}-${ii}" ${pmState[`${si}-${ii}`]?'checked':''} onchange="togglePM(${si},${ii})">
+          <div class="pm-item-text"><label class="pm-item-label" for="pm-${si}-${ii}">${item.label}</label><div class="pm-item-note">${item.note}</div></div>
+        </div>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+function togglePMSec(si){document.getElementById('pmSec'+si).classList.toggle('open');}
+function togglePM(si,ii){pmState[`${si}-${ii}`]=!pmState[`${si}-${ii}`];renderPM();}
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='tasks')renderTaskBoard();
+  if(name==='workflow')renderWorkflow();
+}
+
+function openModal(){editId=null;clearModal();document.getElementById('modalTitle').innerText='New Project';document.getElementById('modalOverlay').classList.add('open');}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+function clearModal(){['mName','mClient','mProgress','mDue','mAdvAmt','mFinAmt','rDura','rRohith','rGowshik','rPrasanth','mDone','mLag'].forEach(id=>document.getElementById(id).value='');document.getElementById('mPhase').value='Strategy';document.getElementById('mStatus').value='active';document.getElementById('adv_pending').checked=true;document.getElementById('fin_pending').checked=true;}
+
+function editProject(id){
+  const p=projects.find(p=>p.id===id);if(!p)return;
+  editId=id;
+  document.getElementById('modalTitle').innerText='Edit Project';
+  document.getElementById('mName').value=p.name;
+  document.getElementById('mClient').value=p.client;
+  document.getElementById('mPhase').value=p.phase;
+  document.getElementById('mStatus').value=p.status;
+  document.getElementById('mProgress').value=p.progress;
+  document.getElementById('mDue').value=p.due||'';
+  document.getElementById('mDone').value=p.done||'';
+  document.getElementById('mLag').value=p.lag||'';
+  document.getElementById('mAdvAmt').value=p.advAmt||'';
+  document.getElementById('mFinAmt').value=p.finAmt||'';
+  document.getElementById('rDura').value=p.rDura||'';
+  document.getElementById('rRohith').value=p.rRohith||'';
+  document.getElementById('rGowshik').value=p.rGowshik||'';
+  document.getElementById('rPrasanth').value=p.rPrasanth||'';
+  document.getElementById(p.advStatus==='paid'?'adv_paid':'adv_pending').checked=true;
+  document.getElementById(p.finStatus==='paid'?'fin_paid':'fin_pending').checked=true;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function deleteProject(id){
+  tasks=tasks.filter(t=>t.projectId!==id);
+  delete workflowState[id];
+  projects=projects.filter(p=>p.id!==id);
+  if(activeTaskProjectId===id)closeProjectTasks();
+  if(workflowCurrentProjectId===id)workflowCurrentProjectId=projects[0]?projects[0].id:null;
+  renderProjects();
+  renderTaskBoard();
+  renderWorkflow();
+}
+function requestDeleteProject(id){
+  pendingDeleteProjectId=id;
+  const input=document.getElementById('deleteProjectConfirmInput');
+  input.value='';
+  document.getElementById('deleteProjectOverlay').classList.add('open');
+  document.getElementById('deleteProjectOverlay').setAttribute('aria-hidden','false');
+  setTimeout(()=>input.focus(),0);
+}
+function closeDeleteProjectModal(){
+  pendingDeleteProjectId=null;
+  document.getElementById('deleteProjectOverlay').classList.remove('open');
+  document.getElementById('deleteProjectOverlay').setAttribute('aria-hidden','true');
+}
+function confirmDeleteProject(){
+  const val=document.getElementById('deleteProjectConfirmInput').value.trim().toLowerCase();
+  if(val!=='yes'){alert('Please type yes to confirm deletion.');return;}
+  if(pendingDeleteProjectId==null)return closeDeleteProjectModal();
+  deleteProject(pendingDeleteProjectId);
+  closeDeleteProjectModal();
+}
+function saveProject(){
+  const name=document.getElementById('mName').value.trim();
+  const client=document.getElementById('mClient').value.trim();
+  if(!name||!client)return alert('Please fill in project name and client.');
+  const data={name,client,phase:document.getElementById('mPhase').value,status:document.getElementById('mStatus').value,progress:parseInt(document.getElementById('mProgress').value)||0,due:document.getElementById('mDue').value||'—',done:document.getElementById('mDone').value,lag:document.getElementById('mLag').value,advAmt:document.getElementById('mAdvAmt').value||0,advStatus:document.querySelector('input[name=advStatus]:checked').value,finAmt:document.getElementById('mFinAmt').value||0,finStatus:document.querySelector('input[name=finStatus]:checked').value,rDura:document.getElementById('rDura').value||0,rRohith:document.getElementById('rRohith').value||0,rGowshik:document.getElementById('rGowshik').value||0,rPrasanth:document.getElementById('rPrasanth').value||0};
+  if(editId){const i=projects.findIndex(p=>p.id===editId);projects[i]={...projects[i],...data};}
+  else{projects.push({id:Date.now(),...data});}
+  closeModal();renderProjects();renderTaskBoard();renderWorkflow();
+}
+
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  if(document.getElementById('projectTasksOverlay').classList.contains('open'))closeProjectTasks();
+  else if(document.getElementById('workflowDocOverlay').classList.contains('open'))closeWorkflowDocModal();
+  else if(document.getElementById('deleteProjectOverlay').classList.contains('open'))closeDeleteProjectModal();
+  else if(document.getElementById('reportOverlay').classList.contains('open'))closeReport();
+  else if(document.getElementById('modalOverlay').classList.contains('open'))closeModal();
+});
+
+document.getElementById('projectTasksOverlay').addEventListener('click',function(e){
+  if(e.target===this)closeProjectTasks();
+});
+
+document.getElementById('projectNewTaskInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){e.preventDefault();addProjectTask();}
+});
+document.getElementById('workflowProjectSelect').addEventListener('change',function(e){
+  workflowCurrentProjectId=Number(e.target.value)||null;
+  renderWorkflow();
+});
+document.getElementById('deleteProjectConfirmInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){e.preventDefault();confirmDeleteProject();}
+});
+document.getElementById('deleteProjectOverlay').addEventListener('click',function(e){
+  if(e.target===this)closeDeleteProjectModal();
+});
+document.getElementById('workflowDocOverlay').addEventListener('click',function(e){
+  if(e.target===this)closeWorkflowDocModal();
+});
+
+renderProjects();renderTaskBoard();renderWorkflow();renderPM();
+</script>
+</body>
+</html>
