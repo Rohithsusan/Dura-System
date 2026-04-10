@@ -23,6 +23,16 @@
   .hbtn.sec{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);}
   .hbtn.sec:hover{background:rgba(255,255,255,.15);}
   .accent-bar{height:4px;background:var(--gradient);flex-shrink:0;}
+  .auth-wrap{position:fixed;inset:0;background:#0b0d17;display:flex;align-items:center;justify-content:center;padding:16px;z-index:999;}
+  .auth-card{width:100%;max-width:360px;background:#fff;border:1px solid var(--gl);border-radius:12px;padding:18px;}
+  .auth-title{font-size:18px;font-weight:800;}
+  .auth-sub{font-size:12px;color:var(--gm);margin-top:4px;}
+  .auth-form{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+  .auth-form label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gm);}
+  .auth-input{width:100%;border:1.5px solid var(--gl);border-radius:8px;padding:9px 11px;font-size:13px;font-family:'Inter',sans-serif;outline:none;}
+  .auth-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(58,27,219,.08);}
+  .auth-btn{border:none;border-radius:8px;padding:10px 12px;background:var(--gradient);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
+  .auth-error{min-height:16px;color:#dc2626;font-size:12px;}
 
   .tracker-main{flex:1;display:flex;flex-direction:column;min-height:0;}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));border-bottom:1px solid var(--gl);flex-shrink:0;}
@@ -333,7 +343,26 @@
 </style>
 </head>
 <body>
-<div class="tracker">
+<div class="auth-wrap" id="loginPage">
+  <div class="auth-card">
+    <div class="auth-title">Admin Login</div>
+    <div class="auth-sub">Sign in to access dashboard</div>
+    <form class="auth-form" onsubmit="handleLogin(event)">
+      <div>
+        <label for="adminUser">Username</label>
+        <input class="auth-input" id="adminUser" autocomplete="username" />
+      </div>
+      <div>
+        <label for="adminPass">Password</label>
+        <input class="auth-input" id="adminPass" type="password" autocomplete="current-password" />
+      </div>
+      <button class="auth-btn" type="submit">Login</button>
+      <div class="auth-error" id="authError"></div>
+    </form>
+  </div>
+</div>
+
+<div class="tracker" id="dashboardPage" style="display:none">
   <div class="header">
     <div>
       <div class="brand">DURA</div>
@@ -342,6 +371,7 @@
     <div class="header-right">
       <button class="hbtn primary" onclick="openModal()">+ New Project</button>
       <button class="hbtn sec" onclick="downloadAllReport()">⬇ Download Report</button>
+      <button class="hbtn sec" onclick="logoutAdmin()">Logout</button>
     </div>
   </div>
   <div class="accent-bar"></div>
@@ -734,12 +764,154 @@ let workflowCurrentProjectId=null;
 let workflowCurrentStep='Discovery';
 let activeWorkflowDoc=null;
 let workflowView='cards';
+const APP_STATE_KEY='dura_tracker_state_v2';
+const PROJECTS_KEY='projects';
+const TASKS_KEY='tasks';
+const PM_STATE_KEY='pmState';
+const WORKFLOW_STATE_KEY='workflowState';
+const WORKFLOW_UI_KEY='workflowUiState';
+const CHECKLIST_KEY='clientChecklist';
+const ADMIN_USERNAME='admin@rohith';
+const ADMIN_PASSWORD='M@8qL!2#Xr$7VpA9';
+const ADMIN_LOGIN_KEY='isAdminLoggedIn';
 
 function fmt(n){return n?'₹'+Number(n).toLocaleString('en-IN'):'—';}
 function escapeHtml(s){
   const d=document.createElement('div');
   d.textContent=s==null?'':String(s);
   return d.innerHTML;
+}
+function isAdminAuthenticated(){
+  return localStorage.getItem(ADMIN_LOGIN_KEY)==='true';
+}
+function showLoginPage(){
+  document.getElementById('loginPage').style.display='flex';
+  document.getElementById('dashboardPage').style.display='none';
+}
+function showDashboardPage(){
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('dashboardPage').style.display='flex';
+}
+function handleLogin(e){
+  e.preventDefault();
+  const user=(document.getElementById('adminUser').value||'').trim();
+  const pass=document.getElementById('adminPass').value||'';
+  const err=document.getElementById('authError');
+  if(user===ADMIN_USERNAME&&pass===ADMIN_PASSWORD){
+    localStorage.setItem(ADMIN_LOGIN_KEY,'true');
+    err.textContent='';
+    showDashboardPage();
+    return;
+  }
+  err.textContent='Invalid username or password';
+}
+function logoutAdmin(){
+  localStorage.removeItem(ADMIN_LOGIN_KEY);
+  showLoginPage();
+  document.getElementById('adminPass').value='';
+}
+function requireAdminAuth(){
+  if(isAdminAuthenticated()){
+    showDashboardPage();
+  }else{
+    showLoginPage();
+  }
+}
+function saveAppState(){
+  try{
+    const checklistCheckedIds=[...document.querySelectorAll('#panel-checklist input[type="checkbox"]:checked')].map(el=>el.id);
+    const state={
+      updatedAt:Date.now(),
+      projects,
+      tasks,
+      pmState,
+      workflowState,
+      workflowCurrentProjectId,
+      workflowCurrentStep,
+      workflowView,
+      checklistCheckedIds
+    };
+    localStorage.setItem(APP_STATE_KEY,JSON.stringify(state));
+    localStorage.setItem(PROJECTS_KEY,JSON.stringify(projects));
+    localStorage.setItem(TASKS_KEY,JSON.stringify(tasks));
+    localStorage.setItem(PM_STATE_KEY,JSON.stringify(pmState));
+    localStorage.setItem(WORKFLOW_STATE_KEY,JSON.stringify(workflowState));
+    localStorage.setItem(WORKFLOW_UI_KEY,JSON.stringify({
+      workflowCurrentProjectId,
+      workflowCurrentStep,
+      workflowView
+    }));
+    localStorage.setItem(CHECKLIST_KEY,JSON.stringify(checklistCheckedIds));
+  }catch(e){
+    console.warn('Failed to save tracker state',e);
+  }
+}
+function loadAppState(){
+  try{
+    const raw=localStorage.getItem(APP_STATE_KEY);
+    let state=raw?JSON.parse(raw):null;
+
+    // Backward-compat: migrate from legacy split keys when v2 key is missing.
+    if(!state){
+      const storedProjects=localStorage.getItem(PROJECTS_KEY);
+      const storedTasks=localStorage.getItem(TASKS_KEY);
+      const storedPmState=localStorage.getItem(PM_STATE_KEY);
+      const storedWorkflow=localStorage.getItem(WORKFLOW_STATE_KEY);
+      const storedWorkflowUi=localStorage.getItem(WORKFLOW_UI_KEY);
+      const storedChecklist=localStorage.getItem(CHECKLIST_KEY);
+      const legacy={
+        updatedAt:Date.now(),
+        projects:storedProjects?JSON.parse(storedProjects):null,
+        tasks:storedTasks?JSON.parse(storedTasks):null,
+        pmState:storedPmState?JSON.parse(storedPmState):null,
+        workflowState:storedWorkflow?JSON.parse(storedWorkflow):null,
+        checklistCheckedIds:storedChecklist?JSON.parse(storedChecklist):null
+      };
+      if(storedWorkflowUi){
+        const ui=JSON.parse(storedWorkflowUi);
+        legacy.workflowCurrentProjectId=ui.workflowCurrentProjectId;
+        legacy.workflowCurrentStep=ui.workflowCurrentStep;
+        legacy.workflowView=ui.workflowView;
+      }
+      state=legacy;
+    }
+    if(!state)return;
+
+    if(Array.isArray(state.projects))projects=state.projects;
+    if(Array.isArray(state.tasks))tasks=state.tasks;
+    if(state.pmState&&typeof state.pmState==='object')pmState=state.pmState;
+    if(state.workflowState&&typeof state.workflowState==='object')workflowState=state.workflowState;
+    if(typeof state.workflowCurrentProjectId==='number')workflowCurrentProjectId=state.workflowCurrentProjectId;
+    if(typeof state.workflowCurrentStep==='string')workflowCurrentStep=state.workflowCurrentStep;
+    if(state.workflowView==='cards'||state.workflowView==='detail')workflowView=state.workflowView;
+    if(Array.isArray(state.checklistCheckedIds)){
+      document.querySelectorAll('#panel-checklist input[type="checkbox"]').forEach(el=>{
+        el.checked=state.checklistCheckedIds.includes(el.id);
+      });
+    }
+
+    // Normalize and persist into canonical v2 key.
+    localStorage.setItem(APP_STATE_KEY,JSON.stringify({
+      updatedAt:Date.now(),
+      projects,
+      tasks,
+      pmState,
+      workflowState,
+      workflowCurrentProjectId,
+      workflowCurrentStep,
+      workflowView,
+      checklistCheckedIds:[...document.querySelectorAll('#panel-checklist input[type="checkbox"]:checked')].map(el=>el.id)
+    }));
+  }catch(e){
+    console.warn('Failed to load tracker state',e);
+  }
+}
+function setupPersistenceGuards(){
+  window.addEventListener('beforeunload',saveAppState);
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='hidden')saveAppState();
+  });
+  setInterval(saveAppState,5000);
 }
 
 function renderProjects(){
@@ -981,10 +1153,11 @@ function renderProjectTasks(){
 
 function toggleProjectTask(id){
   const t=tasks.find(x=>x.id===id);
-  if(t&&t.projectId===activeTaskProjectId){t.done=!t.done;renderProjectTasks();}
+  if(t&&t.projectId===activeTaskProjectId){t.done=!t.done;saveAppState();renderProjectTasks();}
 }
 function deleteProjectTask(id){
   tasks=tasks.filter(t=>t.id!==id);
+  saveAppState();
   renderProjectTasks();
 }
 
@@ -995,6 +1168,7 @@ function addProjectTask(){
   if(!txt)return;
   tasks.push({id:Date.now(),projectId:activeTaskProjectId,text:txt,phase,done:false});
   document.getElementById('projectNewTaskInput').value='';
+  saveAppState();
   renderProjectTasks();
 }
 
@@ -1015,10 +1189,12 @@ function openWorkflowProject(pid){
   if(!projects.find(p=>p.id===pid))return;
   workflowCurrentProjectId=pid;
   workflowView='detail';
+  saveAppState();
   renderWorkflow();
 }
 function showWorkflowProjectCards(){
   workflowView='cards';
+  saveAppState();
   renderWorkflow();
 }
 function renderWorkflowProjectCards(){
@@ -1083,12 +1259,14 @@ function renderWorkflowSteps(){
 }
 function setWorkflowStep(stepId){
   workflowCurrentStep=stepId;
+  saveAppState();
   renderWorkflowSteps();
   renderWorkflowDetails();
 }
 function setWorkflowStatus(status){
   if(!workflowCurrentProjectId)return;
   getWorkflowStepState(workflowCurrentProjectId,workflowCurrentStep).status=status;
+  saveAppState();
   renderWorkflowSteps();
   renderWorkflowDetails();
   renderWorkflowProgress();
@@ -1101,12 +1279,14 @@ function toggleWorkflowChecklist(idx,checked){
   const doneCount=stage.checklist.filter((_,i)=>stepState.checks[i]).length;
   if(doneCount===stage.checklist.length&&stage.checklist.length>0)stepState.status='completed';
   else if(doneCount>0&&stepState.status==='not_started')stepState.status='in_progress';
+  saveAppState();
   renderWorkflowSteps();
   renderWorkflowProgress();
 }
 function updateWorkflowNotes(val){
   if(!workflowCurrentProjectId)return;
   getWorkflowStepState(workflowCurrentProjectId,workflowCurrentStep).notes=val;
+  saveAppState();
 }
 function openWorkflowDoc(docName){
   if(!workflowCurrentProjectId)return;
@@ -1136,6 +1316,7 @@ function saveWorkflowDoc(){
   });
   stepState.docs[activeWorkflowDoc]=data;
   if(stepState.status==='not_started')stepState.status='in_progress';
+  saveAppState();
   renderWorkflowSteps();
   renderWorkflowProgress();
   alert('Document saved.');
@@ -1248,7 +1429,7 @@ function renderPM(){
   }).join('');
 }
 function togglePMSec(si){document.getElementById('pmSec'+si).classList.toggle('open');}
-function togglePM(si,ii){pmState[`${si}-${ii}`]=!pmState[`${si}-${ii}`];renderPM();}
+function togglePM(si,ii){pmState[`${si}-${ii}`]=!pmState[`${si}-${ii}`];saveAppState();renderPM();}
 function switchTab(name,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -1290,6 +1471,7 @@ function deleteProject(id){
   projects=projects.filter(p=>p.id!==id);
   if(activeTaskProjectId===id)closeProjectTasks();
   if(workflowCurrentProjectId===id)workflowCurrentProjectId=projects[0]?projects[0].id:null;
+  saveAppState();
   renderProjects();
   renderTaskBoard();
   renderWorkflow();
@@ -1321,6 +1503,7 @@ function saveProject(){
   const data={name,client,phase:document.getElementById('mPhase').value,status:document.getElementById('mStatus').value,progress:parseInt(document.getElementById('mProgress').value)||0,due:document.getElementById('mDue').value||'—',done:document.getElementById('mDone').value,lag:document.getElementById('mLag').value,advAmt:document.getElementById('mAdvAmt').value||0,advStatus:document.querySelector('input[name=advStatus]:checked').value,finAmt:document.getElementById('mFinAmt').value||0,finStatus:document.querySelector('input[name=finStatus]:checked').value,rDura:document.getElementById('rDura').value||0,rRohith:document.getElementById('rRohith').value||0,rGowshik:document.getElementById('rGowshik').value||0,rPrasanth:document.getElementById('rPrasanth').value||0};
   if(editId){const i=projects.findIndex(p=>p.id===editId);projects[i]={...projects[i],...data};}
   else{projects.push({id:Date.now(),...data});}
+  saveAppState();
   closeModal();renderProjects();renderTaskBoard();renderWorkflow();
 }
 
@@ -1342,6 +1525,7 @@ document.getElementById('projectNewTaskInput').addEventListener('keydown',functi
 });
 document.getElementById('workflowProjectSelect').addEventListener('change',function(e){
   workflowCurrentProjectId=Number(e.target.value)||null;
+  saveAppState();
   renderWorkflow();
 });
 document.getElementById('deleteProjectConfirmInput').addEventListener('keydown',function(e){
@@ -1353,8 +1537,15 @@ document.getElementById('deleteProjectOverlay').addEventListener('click',functio
 document.getElementById('workflowDocOverlay').addEventListener('click',function(e){
   if(e.target===this)closeWorkflowDocModal();
 });
+document.querySelectorAll('#panel-checklist input[type="checkbox"]').forEach(el=>{
+  el.addEventListener('change',saveAppState);
+});
 
+loadAppState();
 renderProjects();renderTaskBoard();renderWorkflow();renderPM();
+setupPersistenceGuards();
+saveAppState();
+requireAdminAuth();
 </script>
 </body>
 </html>
